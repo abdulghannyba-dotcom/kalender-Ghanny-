@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalender Lingkaran</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: #f3f6fb;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #1f2937;
+  }
+  .calendar {
+    width: min(95vw, 620px);
+    background: white;
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: 0 12px 35px rgba(0,0,0,.10);
+  }
+  h1 { margin: 0 0 20px; text-align: center; }
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  button {
+    border: 0;
+    background: #e8eef7;
+    padding: 10px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  button:hover { background: #dbe5f3; }
+  #monthYear {
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+  }
+  .weekdays, .days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+  .weekdays div {
+    text-align: center;
+    font-weight: bold;
+    color: #6b7280;
+    padding: 8px 0;
+  }
+  .day {
+    aspect-ratio: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 17px;
+    user-select: none;
+    transition: .15s;
+  }
+  .day:hover { background: #eef2f7; }
+  .empty { cursor: default; }
+  .today {
+    outline: 2px solid #9ca3af;
+    outline-offset: -2px;
+  }
+  .selected {
+    background: #2563eb;
+    color: white;
+    font-weight: bold;
+  }
+  .selected:hover { background: #1d4ed8; }
+  .info {
+    margin-top: 22px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #f7f9fc;
+    text-align: center;
+    color: #4b5563;
+  }
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .clear { background: #fee2e2; color: #991b1b; }
+</style>
+</head>
+<body>
+
+<div class="calendar">
+  <h1>📅 Kalender</h1>
+
+  <div class="controls">
+    <button onclick="changeMonth(-1)">‹ Bulan sebelumnya</button>
+    <div id="monthYear"></div>
+    <button onclick="changeMonth(1)">Bulan berikutnya ›</button>
+  </div>
+
+  <div class="weekdays">
+    <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div>
+    <div>Kam</div><div>Jum</div><div>Sab</div>
+  </div>
+
+  <div id="days" class="days"></div>
+
+  <div class="info">
+    Klik tanggal untuk <b>memberi atau menghapus lingkaran</b>.
+    <div id="selectedInfo">Belum ada tanggal yang dipilih.</div>
+  </div>
+
+  <div class="actions">
+    <button onclick="goToday()">Kembali ke hari ini</button>
+    <button class="clear" onclick="clearSelected()">Hapus semua lingkaran</button>
+  </div>
+</div>
+
+<script>
+  const monthNames = [
+    "Januari","Februari","Maret","April","Mei","Juni",
+    "Juli","Agustus","September","Oktober","November","Desember"
+  ];
+
+  const today = new Date();
+  let currentMonth = today.getMonth();
+  let currentYear = today.getFullYear();
+
+  // Tanggal yang diberi lingkaran disimpan di browser.
+  let selectedDates = JSON.parse(localStorage.getItem("selectedDates") || "[]");
+
+  function key(year, month, day) {
+    return `${year}-${month + 1}-${day}`;
+  }
+
+  function renderCalendar() {
+    const monthYear = document.getElementById("monthYear");
+    const days = document.getElementById("days");
+
+    monthYear.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    days.innerHTML = "";
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const numberOfDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+      const empty = document.createElement("div");
+      empty.className = "day empty";
+      days.appendChild(empty);
+    }
+
+    for (let day = 1; day <= numberOfDays; day++) {
+      const el = document.createElement("div");
+      el.className = "day";
+      el.textContent = day;
+
+      const dateKey = key(currentYear, currentMonth, day);
+
+      if (selectedDates.includes(dateKey)) {
+        el.classList.add("selected");
+      }
+
+      if (
+        day === today.getDate() &&
+        currentMonth === today.getMonth() &&
+        currentYear === today.getFullYear()
+      ) {
+        el.classList.add("today");
+      }
+
+      el.onclick = () => toggleDate(dateKey);
+      days.appendChild(el);
+    }
+
+    updateInfo();
+  }
+
+  function toggleDate(dateKey) {
+    if (selectedDates.includes(dateKey)) {
+      selectedDates = selectedDates.filter(d => d !== dateKey);
+    } else {
+      selectedDates.push(dateKey);
+    }
+
+    localStorage.setItem("selectedDates", JSON.stringify(selectedDates));
+    renderCalendar();
+  }
+
+  function changeMonth(amount) {
+    currentMonth += amount;
+
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+
+    renderCalendar();
+  }
+
+  function goToday() {
+    currentMonth = today.getMonth();
+    currentYear = today.getFullYear();
+    renderCalendar();
+  }
+
+  function clearSelected() {
+    selectedDates = [];
+    localStorage.removeItem("selectedDates");
+    renderCalendar();
+  }
+
+  function updateInfo() {
+    const info = document.getElementById("selectedInfo");
+    const current = selectedDates.filter(d => {
+      const [y, m] = d.split("-").map(Number);
+      return y === currentYear && m === currentMonth + 1;
+    });
+
+    if (current.length === 0) {
+      info.textContent = "Belum ada tanggal yang dilingkari bulan ini.";
+    } else {
+      const nums = current.map(d => Number(d.split("-")[2])).sort((a,b) => a-b);
+      info.textContent = "Tanggal dilingkari: " + nums.join(", ");
+    }
+  }
+
+  renderCalendar();
+</script>
+
+</body>
+</html>
